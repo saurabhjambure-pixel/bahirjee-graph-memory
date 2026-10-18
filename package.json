@@ -11,7 +11,8 @@
     "test:router": "node scripts/router-dispatch.test.mjs",
     "test:cron-daily": "node scripts/cron-daily.test.mjs",
     "test:ask": "node scripts/ask-bahirjee.test.mjs",
-    "test:graph": "node scripts/graph-roundtrip.test.mjs"
+    "test:graph": "node scripts/graph-roundtrip.test.mjs",
+    "test:supabase-url": "node scripts/supabase-url.test.mjs"
   },
   "dependencies": {
     "@llamaindex/liteparse": "^2.8.1",
