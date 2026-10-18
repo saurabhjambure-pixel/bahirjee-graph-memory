@@ -6627,7 +6627,6 @@ export async function askBahirjee(context, signal, question, ragChunks = [], opt
     };
 
     const basePayload = {
-        context,
         ...payload,
         ragChunks,
         knowledgeChunks,
