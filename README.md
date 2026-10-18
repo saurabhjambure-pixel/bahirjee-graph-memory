@@ -323,7 +323,7 @@ Bahirjee itself (the intelligence pipeline, Supabase schema and React app) exist
 the hackathon, on 17–18 Oct 2026**: about 2,250 lines of new graph code and tests, plus the
 integration changes below. The first four commits from the private development repository are
 squashed here into `b0bb208`. The runnable Cypher docs followed in `114d5f6`, and the analysis-run
-writer in `40c58ab`. The design plan and the implementation log are in
+writer in `81ef649`. The design plan and the implementation log are in
 [docs/graph-hacks/](./docs/graph-hacks/).
 
 | New | Changed (integration points) |
@@ -364,9 +364,18 @@ AI coding agents were used, as the rules allow. The team designed the approach a
 directed the agents, reviewed the Cypher, and tested everything end to end against live FalkorDB
 Cloud and Gemini.
 
+AI tools, mainly **Claude Code** and **Devin**, helped in three ways:
+- **Documentation:** drafting this README, the judge guide and `docs/DEPLOYMENT.md`, all reviewed
+  and corrected by the team.
+- **Testing:** writing the offline test matrices (`npm run test:graph` and the other suites) and
+  running the live checks against FalkorDB Cloud that are recorded in the implementation log.
+- **Some orchestration:** splitting the work into steps, running parallel coding sessions on separate
+  pieces, and keeping the implementation log up to date as the work landed.
+
+Specifically:
 - The original graph layer (the files in `b0bb208`) was written with **Devin**, an AI coding agent.
   The bugs that live testing found are recorded in the implementation log.
-- **Claude Code** prepared the analysis-run writer and its tests (`40c58ab`), the judge guide, and this
+- **Claude Code** prepared the analysis-run writer and its tests (`81ef649`), the judge guide, and this
   README. `scripts/graph-ask.mjs` was also prepared with an AI coding assistant.
 
 ---
