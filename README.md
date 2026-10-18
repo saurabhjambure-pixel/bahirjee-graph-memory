@@ -201,6 +201,30 @@ MATCH (a {id: $a}), (b {id: $b}) MERGE (a)-[r:{REL}]->(b) SET r += $props
 MATCH (h:Handoff {id: $id}) SET h.status = 'done', h.completed_ts = $ts
 ```
 
+**Activity feed** (`POST /api/graph` with `action: 'activity'`, in
+[lib/handlers/graph.js](./lib/handlers/graph.js)): the latest work the agents wrote, newest first:
+```cypher
+MATCH (n)
+WHERE n:Handoff OR n:Finding OR n:Read OR n:Session
+RETURN n ORDER BY coalesce(n.ts, n.created_ts, n.started_ts, n.observed_at, 0) DESC
+LIMIT $limit
+```
+
+**Schema bootstrap** (`ensureSchema()` in [lib/_graph.js](./lib/_graph.js)), run once per tenant
+graph. A unique `id` constraint is created for each of the ten labels through the client's
+`constraintCreate('UNIQUE', 'NODE', label, 'id')`. That is a FalkorDB module command
+(`GRAPH.CONSTRAINT CREATE`), not Cypher. The indexes are Cypher:
+```cypher
+CREATE INDEX FOR (n:{Label}) ON (n.id)          -- for each of the ten labels
+CREATE INDEX FOR (e:Entity) ON (e.name_key)     -- backs the entity gate
+```
+An index or constraint that already exists counts as success, so bootstrap is safe to repeat.
+
+**Try every query yourself:** [docs/graph-hacks/queries.cypher](./docs/graph-hacks/queries.cypher)
+has all of the queries above with their parameters filled in from the seed tenant. After
+`scripts/graph-seed.mjs`, paste them one at a time into FalkorDB Browser on graph
+`bahirjee:00000000-0000-4000-8000-00000000000d`.
+
 ### The agent loop
 
 [lib/_graphAgent.js](./lib/_graphAgent.js): Reason → Tool → Observe, hard-capped at
@@ -263,7 +287,8 @@ MEMORY_GRAPH_ENABLED=0 node --env-file=.env scripts/graph-ask.mjs "What breaks i
 ```
 
 Open the FalkorDB Browser at http://localhost:3000 and select graph
-`bahirjee:00000000-0000-4000-8000-00000000000d` to see what the tools traverse.
+`bahirjee:00000000-0000-4000-8000-00000000000d` to see what the tools traverse. Then run the
+queries in [docs/graph-hacks/queries.cypher](./docs/graph-hacks/queries.cypher) one at a time.
 
 **Full app** (Ask Bahirjee in the browser, the daily ladder): this also needs a Supabase project
 (`schema.sql` + `scripts/migrations/`) and the variables in `.env.example`. See
