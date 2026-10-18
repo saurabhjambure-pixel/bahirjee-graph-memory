@@ -16,6 +16,7 @@ import { ConfirmDialog } from '../common/Modal';
 import { trackConversionClick } from '../../services/interactionService';
 import { getOrCreateShareToken } from '../../services/reportService';
 import { groupSectionsForDisplay, splitSectionSignals } from '../../services/signalTaxonomy';
+import { formatDegradationNote } from '../../utils/formatters';
 
 /**
  * Did anything actually get SKIPPED, or was the run complete but flagged?
@@ -514,7 +515,7 @@ export default function ReportWorkspace({
                           <ul className="space-y-1">
                             {finalReport.degradations.map((d, i) => (
                               <li key={i} className="text-bah-warning text-xs">
-                                <span className="text-bah-warning">{d.step}:</span> {d.impact || d.reason}
+                                <span className="text-bah-warning">{d.step}:</span> {formatDegradationNote(d)}
                               </li>
                             ))}
                           </ul>
