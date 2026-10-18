@@ -39,7 +39,7 @@ Configure these variables in your Vercel Project Settings and local `.env` file.
 | Variable | Required | Description | Example / Default |
 | :--- | :---: | :--- | :--- |
 | `SUPABASE_URL` | **Yes** | Supabase project API URL | `https://xyzcompany.supabase.co` |
-| `SUPABASE_ANON_KEY` | **Yes** | Supabase anon key (used in `auth-link`) | `eyJhbGciOi...` |
+| `SUPABASE_ANON_KEY` | No | Supabase anon key for `auth-link`; falls back to `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOi...` |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret key | `eyJhbGciOi...` |
 | `GEMINI_API_KEY` | **Yes** | Google AI Studio Gemini API Key | `AIzaSy...` |
 | `TAVILY_API_KEY` | **Yes** | Tavily search engine API key | `tvly-...` |
@@ -47,7 +47,10 @@ Configure these variables in your Vercel Project Settings and local `.env` file.
 | `EXA_API_KEY` | **Yes** | Exa neural search & fallback scraping key | `exa-...` |
 | `INTERNAL_API_KEY` | **Yes** | Secret for worker self-triggering M2M auth | Any random 32-char hex string |
 | `ADMIN_EMAILS` | **Yes** | Comma-separated list of platform admin emails | `admin@bahirjee.in,ops@bahirjee.in` |
-| `ALLOWED_ORIGINS` | **Yes** | Allowed CORS origins (comma-separated) | `https://bahirjee.in,https://app.bahirjee.in` |
+| `CRON_SECRET` | **Yes** | Vercel sends it as `Authorization: Bearer …` on the two crons in `vercel.json` only when it is set, so without it every scheduled run gets 401 | Any random 32+ char string |
+| `ALLOWED_ORIGINS` | No | EXTRA CORS origins only — the deployment's own origin is trusted automatically | `https://bahirjee.in,https://app.bahirjee.in` |
+| `MEMORY_GRAPH_ENABLED` | No | `1` turns on the FalkorDB memory graph; anything else = degraded mode | `1` |
+| `FALKORDB_URL` / `FALKORDB_USERNAME` / `FALKORDB_PASSWORD` | With graph | FalkorDB Cloud instance (free tier = `falkor://`, paid TLS = `falkors://`) | `falkor://host.r1.falkordb.io:PORT` |
 | `KV_REST_API_URL` | Rec. | Upstash Redis REST URL for distributed rate limiting | `https://...upstash.io` |
 | `KV_REST_API_TOKEN` | Rec. | Upstash Redis REST Token | `AX...` |
 | `STEP_MAX_MS` | No | Max execution milliseconds per worker step | `45000` |
@@ -62,31 +65,45 @@ Configure these variables in your Vercel Project Settings and local `.env` file.
 
 ## 3. Supabase Database Provisioning
 
-### 3.1 Initial Schema
-1. Open the Supabase Project Dashboard -> **SQL Editor**.
-2. Run the full [schema.sql](../schema.sql) script. This creates all base tables (`clients`, `profiles`, `reports`, `intelligence_jobs`, `observations`, `patterns`, `shifts`, `document_chunks`, etc.), triggers, and RLS policies.
+### 3.1 Fresh project — apply order
+`schema.sql` alone does **not** produce a working database. A fresh project needs the base
+schema, every migration, and `sql/context_signals_schema.sql` (which must come after the v6
+migrations because it references `observations`). This exact order was dry-run end to end
+against an empty Postgres 16 with Supabase's `auth` schema and roles stubbed:
 
-### 3.2 Migrations Sequence
-Run the sequential migration scripts located in `scripts/migrations/` in order:
-- `v14_stepped_pipeline.sql` — Stepped pipeline state & observation idempotency.
-- `v15_report_verification.sql` — Report verification columns & gate metadata.
-- `v16_agent_runtime.sql` — Agent runtime execution tables.
-- `v17_agent_runs_conflict.sql` — Upsert conflict target for agent runs.
-- `v18_report_run_id_idempotency.sql` — Deduplication keys on reports.
-- `v22_observation_source_types.sql` — Widened observation source types (`source_watch`, `connector`).
-- `v23_parallel_ai_source_type.sql` — Support for Parallel AI scraper provenance.
-- `v24_self_serve_and_run_tier.sql` — Self-serve workspaces & shallow/full run tier tracking.
-- `v25_entity_categories.sql` — Expanded entity taxonomy (`customer`, `investor`, `partner`, `adjacent`).
-- `v26_company_contexts.sql` — Reusable domain context store (`company_contexts`).
-- `v27_company_contexts_server_write.sql` — Service-role RPC for worker context persistence.
-- `v28_entity_spine.sql` — Entity canonical domains and relationship graph.
-- `v29_knowledge_chunks.sql` — pgvector knowledge chunks for signals and observations.
+1. `schema.sql`
+2. `scripts/migrations/v6_phase1_observations.sql`, `v6_phase2_patterns.sql`, `v6_phase3_shifts.sql`, `v6_phase4_blindspots_opportunities.sql`, `v6_phase7_impact.sql`
+3. `sql/context_signals_schema.sql`
+4. `scripts/migrations/v7_*` through `v38_*` in numeric order. Where two files share a number, either order works: `v8_company_memory` then `v8_company_memory_backfill`; both `v15_*`; both `v16_*`; both `v17_*`; both `v18_*`.
+5. Seeds: `sql/seed_bahirjee_in_domain.sql`, then `sql/seed_admin_access.sql`. Never run `sql/seed_dev_bypass_user.sql` in production.
 
-### 3.3 Seeding Initial Data
-- Run `sql/seed_admin_access.sql` to provision the initial administrator account.
+Every file is idempotent. `v37_intelligence_targets.sql` carries its own `BEGIN; … COMMIT;` — paste it whole.
+
+Pasting 46 files into the SQL editor is error-prone; with the project's **direct** connection
+string (Project Settings → Database → Connection string → URI) the same order runs in one go:
+
+```bash
+export SUPABASE_DB_URL='postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres'
+M=scripts/migrations
+for f in schema.sql $M/v6_*.sql sql/context_signals_schema.sql \
+         $(ls $M/v*.sql | grep -v '/v6_' | sort -t v -k2 -n) \
+         sql/seed_bahirjee_in_domain.sql sql/seed_admin_access.sql; do
+  echo "== $f"; psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || break
+done
+```
+
+### 3.2 Seeding notes
+- `sql/seed_admin_access.sql` creates `admin@bahirjee.in` with a testing-default password.
   > [!IMPORTANT]
   > Change the seeded default password immediately after initial login via `/admin/reset`.
-- Run `sql/seed_bahirjee_in_domain.sql` to establish the primary organization client domain.
+- `sql/seed_bahirjee_in_domain.sql` creates the `bahirjee.in` client so `AUTO_ACCESS_DOMAINS` users attach to an org.
+
+### 3.3 Verify
+```sql
+select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';  -- 39
+select 1 from public.intelligence_targets limit 1;                             -- no error = v37 applied
+select email, role from public.email_allowlist where role = 'admin';            -- the seeded admin
+```
 
 ### 3.4 Supabase Dashboard Configuration
 - **Auth Settings -> URL Configuration**:
