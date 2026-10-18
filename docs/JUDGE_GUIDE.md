@@ -147,7 +147,7 @@ GEMINI_API_KEY=your-gemini-key
 INTERNAL_API_KEY=any-long-random-string
 ```
 
-Seed the synthetic tenant and run the offline tests (15 checks, no network):
+Seed the synthetic tenant and run the offline tests (19 checks, no network):
 
 ```bash
 node --env-file=.env scripts/graph-seed.mjs
