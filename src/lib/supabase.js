@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { createFetchWithTimeout } from './fetchWithTimeout.js'
+import { normalizeSupabaseUrl } from './supabaseUrl.js'
 
 function readEnv(name) {
     const viteEnv = typeof import.meta !== 'undefined' ? import.meta.env || {} : {}
@@ -23,7 +24,7 @@ function readProcessEnv(name) {
 // never see the service role, so its key chain stops at anon.
 const isServer = typeof window === 'undefined'
 
-const supabaseUrl = readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL')
+const supabaseUrl = normalizeSupabaseUrl(readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL'))
 const supabaseKey = isServer
     ? readProcessEnv('SUPABASE_SERVICE_ROLE_KEY') || readProcessEnv('VITE_SUPABASE_SERVICE_ROLE_KEY')
     : readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY')
