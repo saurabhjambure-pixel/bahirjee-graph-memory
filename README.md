@@ -12,9 +12,6 @@ Autonomous strategic intelligence for founders and strategy leaders, with admin-
 | :--- | :--- |
 | [docs/PROJECT_EXECUTION_BRIEF.md](./docs/PROJECT_EXECUTION_BRIEF.md) | **Authoritative architecture, pipeline stages, and provider routing** |
 | [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Production setup for Vercel, Supabase, and Upstash Redis |
-| [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) | Operational runbook for diagnosing worker, scraping, and auth issues |
-| [docs/SCALING_STRATEGY.md](./docs/SCALING_STRATEGY.md) | Stepped worker execution, observation budget, and cost control |
-| [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) | Identity model, roles (`admin`, `client_user`, `brief_viewer`), and RLS |
 | [docs/graph-hacks/](./docs/graph-hacks/) | Graph Hacks: the FalkorDB memory-graph plan and implementation log |
 
 ---
@@ -304,14 +301,10 @@ npm run preview
 ### Test Suites (Plain Node)
 
 ```bash
-npm run test:router        # api/router.js route dispatch & body parsing
-npm run test:security      # API security & RPC regression checks
-npm run test:signals       # Signal filter chain (grounding, read-guard)
-npm run test:verifier      # Pre-publish verifier gate
-npm run test:brief-policy  # Decision brief attestation gates
-npm run test:watch         # Source watch hash & diff validation
-npm run test:connectors    # Structured connectors geo-routing & fallbacks
-node scripts/graph-roundtrip.test.mjs   # Track 2 memory-graph outcome matrix (fake FalkorDB)
+npm run test:graph         # memory-graph outcome matrix (fake FalkorDB, no network)
+npm run test:router        # api/router.js dispatch, including the /api/graph route
+npm run test:cron-daily    # the daily ladder that writes Sessions, Findings and Handoffs
+npm run test:ask           # Ask Bahirjee, which asks the graph first
 ```
 
 ---

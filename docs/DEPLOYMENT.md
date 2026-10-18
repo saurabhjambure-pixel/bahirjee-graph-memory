@@ -143,14 +143,11 @@ Run these validation checks immediately following deployment:
 
 ### 5.1 Local / Pre-Deploy Automated Checks
 ```bash
-# Run security regression tests
-npm run test:security
-
 # Verify API router dispatch
 npm run test:router
 
-# Verify signal processing and grounding filters
-npm run test:signals
+# Verify the memory graph layer
+npm run test:graph
 
 # Verify production build compilation
 npm run build

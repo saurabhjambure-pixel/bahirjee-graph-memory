@@ -220,6 +220,3 @@ Do not describe the scraper stack as “Firecrawl primary” or the model stack 
 
 1. **[docs/PROJECT_EXECUTION_BRIEF.md](./PROJECT_EXECUTION_BRIEF.md)**: Authoritative architecture, execution model, and provider routing.
 2. **[docs/DEPLOYMENT.md](./DEPLOYMENT.md)**: Production deployment guide for Vercel, Supabase, and Upstash.
-3. **[docs/TROUBLESHOOTING.md](./TROUBLESHOOTING.md)**: Failure mode resolution and operational runbook.
-4. **[docs/SCALING_STRATEGY.md](./SCALING_STRATEGY.md)**: Pipeline stepped execution and cost control strategy.
-5. **[docs/AUTHENTICATION.md](./AUTHENTICATION.md)**: Access control, roles, and security model.
