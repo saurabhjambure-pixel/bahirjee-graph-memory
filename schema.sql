@@ -62,6 +62,22 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists is_premium boolean default false;
 alter table public.profiles add column if not exists run_count integer default 0 not null;
 
+-- Helper function to check if current user is admin (bypasses RLS).
+-- Defined here, before any policy uses it: on a fresh project a policy that references a
+-- not-yet-created function fails and aborts the whole script.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
 -- Reports (Intelligence)
 create table if not exists public.reports (
   id uuid default gen_random_uuid() primary key,
@@ -347,19 +363,8 @@ alter table public.company_memory_state enable row level security;
 alter table public.interactions enable row level security;
 alter table public.email_allowlist enable row level security;
 
--- Helper function to check if current user is admin (bypasses RLS)
-create or replace function public.is_admin()
-returns boolean
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
+-- public.is_admin() is defined right after the profiles table (top of file) — policies
+-- above this point already reference it, so it must exist before them on a fresh project.
 
 -- PROFILES Policies
 drop policy if exists "Admins all profiles" on public.profiles;
