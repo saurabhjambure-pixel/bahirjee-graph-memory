@@ -1,0 +1,43 @@
+{
+    "functions": {
+        "api/router.js": {
+            "maxDuration": 60,
+            "includeFiles": "node_modules/@llamaindex/liteparse*/**"
+        }
+    },
+    "crons": [
+        {
+            "path": "/api/cron-runs",
+            "schedule": "0 6 * * 1"
+        },
+        {
+            "path": "/api/cron-daily",
+            "schedule": "0 7 * * *"
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/api/((?!router).*)",
+            "destination": "/api/router?route=$1"
+        },
+        {
+            "source": "/((?!api/|manifest\\.webmanifest|sw\\.js|favicon\\.ico|apple-touch-icon\\.png|mask-icon\\.svg|logo-192\\.png|logo-512\\.png|.*\\.(?:js|css|png|svg|ico|json|webmanifest|txt)$).*)",
+            "destination": "/index.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/sw.js",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
+                },
+                {
+                    "key": "Service-Worker-Allowed",
+                    "value": "/"
+                }
+            ]
+        }
+    ]
+}

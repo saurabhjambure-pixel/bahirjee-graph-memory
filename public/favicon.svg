@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bahirjee favicon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#F7F3FF"/>
+      <stop offset="100%" stop-color="#DCEEEB"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+  <path d="M26 86c0-17 13-31 30-31 9 0 17 4 22 11l-11 8c-3-4-8-6-13-6-8 0-15 7-15 16s7 16 15 16c5 0 10-2 13-6l11 8c-5 7-13 11-22 11-17 0-30-14-30-31zm57-41h18v55H83V45zm3 0h18v55H86V45z" fill="#1F6B49"/>
+  <circle cx="93" cy="43" r="9" fill="#88C2A2"/>
+</svg>

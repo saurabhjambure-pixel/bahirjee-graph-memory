@@ -1,0 +1,76 @@
+{
+  "name": "self-and-unreadable",
+  "why": "Two real CareMother defects: the founder's own news reported back at 10/10, and a signal with no read that rendered an empty panel.",
+  "company": "CareMother",
+  "observations": [
+    {
+      "url": "https://news.example/own",
+      "theme": "competitor_intel",
+      "source_type": "tavily"
+    },
+    {
+      "url": "https://news.example/rival",
+      "theme": "competitor_intel",
+      "source_type": "tavily"
+    }
+  ],
+  "signals": [
+    {
+      "signal_headline": "CareMother deployed 114 monitors",
+      "category": "CompetitorLaunch",
+      "entity_involved": "CareMother by Doto Health",
+      "source_url": "https://news.example/own",
+      "date": "2026-01-12",
+      "so_what_for_you": "This is your own announcement being read back to you."
+    },
+    {
+      "signal_headline": "Janitri expands to three states",
+      "category": "CompetitorStrategy",
+      "entity_involved": "Janitri",
+      "source_url": "https://news.example/rival",
+      "date": "2026-01-12",
+      "so_what_for_you": "A direct rival now covers territory you had to yourself."
+    },
+    {
+      "signal_headline": "Headline with no read at all",
+      "category": "CompetitorStrategy",
+      "entity_involved": "Janitri",
+      "source_url": "https://news.example/rival",
+      "date": "2026-01-12"
+    }
+  ],
+  "expected": {
+    "signals_in": 3,
+    "dropped_self": 1,
+    "dropped_unreadable": 1,
+    "dropped_ungrounded_prefilter": 0,
+    "dropped_by_gate": 0,
+    "published": 1,
+    "verdict": "downgraded",
+    "source_confidence": {
+      "exact": 1
+    },
+    "distinct_source_hosts": 1,
+    "sections": [
+      "CompetitorStrategy"
+    ],
+    "headlines": [
+      "Janitri expands to three states"
+    ],
+    "citations": [
+      "https://news.example/rival"
+    ],
+    "repointed_from": [],
+    "failed_gates": [
+      "date_confidence:warn",
+      "source_diversity:warn"
+    ],
+    "coverage_ok": false,
+    "coverage_gaps": [
+      "Competition",
+      "Opportunities",
+      "general",
+      "general"
+    ]
+  }
+}

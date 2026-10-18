@@ -1,0 +1,74 @@
+{
+  "name": "single-source-echo",
+  "why": "Noisy landscape: many findings, one outlet, several restating the same event. Six signals from one domain is one story counted six times — the diversity and duplicate gates exist for this.",
+  "company": "Aithon Solutions",
+  "observations": [
+    {
+      "url": "https://oneoutlet.example/story",
+      "theme": "competitor_intel",
+      "source_type": "tavily"
+    }
+  ],
+  "signals": [
+    {
+      "signal_headline": "Rival raises Series C",
+      "category": "CompetitorFunding",
+      "entity_involved": "Rival",
+      "source_url": "https://oneoutlet.example/story",
+      "date": "2026-01-11",
+      "so_what_for_you": "They can now fund a direct sales team against you."
+    },
+    {
+      "signal_headline": "Rival raises Series C!",
+      "category": "CompetitorFunding",
+      "entity_involved": "Rival",
+      "source_url": "https://oneoutlet.example/story",
+      "date": "2026-01-11",
+      "so_what_for_you": "They can now fund a direct sales team against you."
+    },
+    {
+      "signal_headline": "Rival announces funding round",
+      "category": "CompetitorFunding",
+      "entity_involved": "Rival",
+      "source_url": "https://oneoutlet.example/story",
+      "date": "2026-01-11",
+      "so_what_for_you": "Same event, restated by the same outlet."
+    }
+  ],
+  "expected": {
+    "signals_in": 3,
+    "dropped_self": 0,
+    "dropped_unreadable": 0,
+    "dropped_ungrounded_prefilter": 0,
+    "dropped_by_gate": 1,
+    "published": 2,
+    "verdict": "blocked",
+    "source_confidence": {
+      "exact": 2
+    },
+    "distinct_source_hosts": 1,
+    "sections": [
+      "CompetitorFunding"
+    ],
+    "headlines": [
+      "Rival announces funding round",
+      "Rival raises Series C"
+    ],
+    "citations": [
+      "https://oneoutlet.example/story",
+      "https://oneoutlet.example/story"
+    ],
+    "repointed_from": [],
+    "failed_gates": [
+      "date_confidence:warn",
+      "duplicate_findings:warn",
+      "source_diversity:warn"
+    ],
+    "coverage_ok": false,
+    "coverage_gaps": [
+      "Opportunities",
+      "general",
+      "general"
+    ]
+  }
+}

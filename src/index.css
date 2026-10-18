@@ -1,0 +1,400 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Bahirjee design system — claymorphism on a soft aurora wash.
+
+   COLOUR CONTRACT (60-30-10):
+     60%  the aurora gradient wash (--bah-bg + the body mesh)
+     30%  translucent glass surfaces (--bah-panel / --bah-panel-strong)
+     10%  sage accent + the primary CTA gradient
+
+   Sage (#88c2a2) is a FILL, not a text colour: it is 1.84:1 on the base,
+   nowhere near WCAG AA. So the accent is split in two —
+     --bah-accent       fills, borders, icon glyphs on dark chips
+     --bah-accent-text  text and links  (5.8:1 on base, 6.3:1 on glass)
+   `.text-bah-accent` deliberately resolves to the TEXT token, so the ~100
+   existing call sites became AA-compliant without touching a component.
+   Every value below is verified; re-check with scratchpad/contrast.mjs
+   before changing any of them.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --bah-bg: #f4f2f9;
+    --bah-panel: rgba(255, 255, 255, 0.72);
+    --bah-panel-strong: rgba(255, 255, 255, 0.88);
+    --bah-panel-soft: rgba(23, 42, 34, 0.04);
+    --bah-border: rgba(23, 42, 34, 0.10);
+    --bah-border-light: rgba(23, 42, 34, 0.16);
+
+    /* Text — all verified >= 4.5:1 on both base and glass */
+    --bah-text: #171f1c;
+    --bah-text-strong: #0d1310;
+    --bah-muted: #54615c;
+    --bah-muted-2: #5f6c67;
+
+    /* Accent: fill vs text (see contract above) */
+    --bah-accent: #88c2a2;
+    --bah-accent-text: #1f6b49;
+    --bah-accent-strong: #2a7a58;
+    --bah-cyan: #76b7cf;
+    --bah-cyan-text: #155f7d;
+    --bah-warning: #dba96a;
+    --bah-warning-text: #8a5410;
+    --bah-danger: #cf7b5e;
+    --bah-danger-text: #9d3520;
+
+    --bah-accent-rgb: 136, 194, 162;
+
+    /* Clay + glass */
+    --bah-radius-sm: 8px;    /* inputs, buttons, badges, rows */
+    --bah-radius-lg: 20px;   /* cards, panels, modals */
+    --bah-glass-blur: 16px;
+    --bah-shadow-clay:
+      0 1px 2px rgba(23, 42, 34, 0.04),
+      0 12px 32px -8px rgba(23, 42, 34, 0.10);
+    --bah-shadow-clay-lg:
+      0 2px 4px rgba(23, 42, 34, 0.04),
+      0 24px 56px -12px rgba(23, 42, 34, 0.16);
+    --bah-glow-accent: 0 8px 24px -6px rgba(136, 194, 162, 0.55);
+    --bah-gradient-cta: linear-gradient(135deg, #88c2a2, #76b7cf);
+  }
+
+  /* The aurora mesh lives on <html>, not <body>. Body-background propagation to the
+     canvas combined with `attachment: fixed` left a hard seam once the page scrolled;
+     html always fills the canvas, so the wash stays continuous. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+    min-height: 100%;
+    background-color: var(--bah-bg);
+    background-image:
+      radial-gradient(58% 44% at 12% 6%, rgba(136, 194, 162, 0.38), transparent 70%),
+      radial-gradient(50% 40% at 88% 4%, rgba(199, 176, 232, 0.34), transparent 70%),
+      radial-gradient(52% 42% at 78% 92%, rgba(244, 185, 205, 0.30), transparent 70%),
+      radial-gradient(46% 40% at 8% 88%, rgba(118, 183, 207, 0.26), transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: transparent;
+    color: var(--bah-text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+    color: var(--bah-text-strong);
+    @apply tracking-tight;
+  }
+
+  /* Numbers, codes and IDs read as data, not prose. No third webfont —
+     the system mono stack keeps the brief's two-family limit intact. */
+  .font-num,
+  .font-mono {
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: rgba(136, 194, 162, 0.32);
+    color: var(--bah-text-strong);
+  }
+
+  /* One global focus ring. Replaces the scattered `outline-none` +
+     border-colour-only pattern, which left several controls with no visible
+     focus state at all. */
+  :focus-visible {
+    outline: 2px solid var(--bah-accent-text);
+    outline-offset: 2px;
+    border-radius: var(--bah-radius-sm);
+  }
+}
+
+@layer utilities {
+  /* ── Semantic surface/text utilities ─────────────────────────────── */
+  .bg-bah-bg { background-color: var(--bah-bg); }
+  .bg-bah-panel { background-color: var(--bah-panel); }
+  .bg-bah-panel-strong { background-color: var(--bah-panel-strong); }
+  .bg-bah-panel-strong-80 { background-color: rgba(255, 255, 255, 0.80); }
+  .bg-bah-panel-strong-50 { background-color: rgba(255, 255, 255, 0.55); }
+  .bg-bah-panel-soft { background-color: var(--bah-panel-soft); }
+
+  .border-bah { border-color: var(--bah-border); }
+  .border-bah-light { border-color: var(--bah-border-light); }
+
+  .text-bah { color: var(--bah-text); }
+  .text-bah-strong { color: var(--bah-text-strong); }
+  .text-bah-muted { color: var(--bah-muted); }
+  .text-bah-muted-2 { color: var(--bah-muted-2); }
+
+  /* Text tokens resolve to the AA-safe variants, never the raw fill. */
+  .text-bah-accent { color: var(--bah-accent-text); }
+  .text-bah-accent-strong { color: var(--bah-accent-strong); }
+  .text-bah-cyan { color: var(--bah-cyan-text); }
+  .text-bah-warning { color: var(--bah-warning-text); }
+  .text-bah-danger { color: var(--bah-danger-text); }
+
+  .bg-bah-accent { background-color: var(--bah-accent); }
+  .bg-bah-accent-soft { background-color: rgba(136, 194, 162, 0.16); }
+  .bg-bah-cyan-soft { background-color: rgba(118, 183, 207, 0.16); }
+  .bg-bah-warning-soft { background-color: rgba(219, 169, 106, 0.18); }
+  .bg-bah-danger-soft { background-color: rgba(207, 123, 94, 0.16); }
+
+  .font-display { font-family: 'Poppins', 'Inter', system-ui, sans-serif; }
+
+  .brand-gradient { background-image: var(--bah-gradient-cta); }
+
+  /* ── Clay + glass primitives ─────────────────────────────────────── */
+  .bah-panel {
+    background-color: var(--bah-panel);
+    backdrop-filter: blur(var(--bah-glass-blur));
+    -webkit-backdrop-filter: blur(var(--bah-glass-blur));
+    border: 1px solid var(--bah-border);
+    border-radius: var(--bah-radius-lg);
+    box-shadow: var(--bah-shadow-clay);
+  }
+
+  .bah-panel-strong {
+    background-color: var(--bah-panel-strong);
+    backdrop-filter: blur(var(--bah-glass-blur));
+    -webkit-backdrop-filter: blur(var(--bah-glass-blur));
+    border: 1px solid var(--bah-border);
+    border-radius: var(--bah-radius-lg);
+    box-shadow: var(--bah-shadow-clay);
+  }
+
+  /* Cards lift on hover — suppressed under prefers-reduced-motion below. */
+  .bah-card-hover {
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 220ms ease;
+  }
+  .bah-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--bah-shadow-clay-lg);
+    border-color: rgba(136, 194, 162, 0.45);
+  }
+
+  .bah-input,
+  .bah-input-strong {
+    @apply w-full transition-all;
+    background-color: rgba(255, 255, 255, 0.75);
+    border: 1px solid var(--bah-border);
+    border-radius: var(--bah-radius-sm);
+    padding: 0.625rem 1rem;
+    color: var(--bah-text);
+    outline: none;
+  }
+
+  .bah-input::placeholder,
+  .bah-input-strong::placeholder { color: var(--bah-muted-2); }
+
+  /* Generous field with a soft focus glow, per the brief. */
+  .bah-input:focus,
+  .bah-input-strong:focus {
+    border-color: var(--bah-accent);
+    box-shadow: 0 0 0 4px rgba(136, 194, 162, 0.22);
+    background-color: rgba(255, 255, 255, 0.95);
+  }
+
+  .bah-button-primary {
+    @apply inline-flex items-center justify-center gap-2 font-medium transition-all;
+    border-radius: var(--bah-radius-sm);
+    background-image: var(--bah-gradient-cta);
+    /* Near-black on the pastel gradient measures 8.04:1 at the worst stop.
+       White would be 2.04:1 — the pastel look and AA are compatible only
+       in this direction. */
+    color: #0d1a14;
+    box-shadow: var(--bah-glow-accent);
+  }
+  .bah-button-primary:hover { filter: brightness(1.04); transform: translateY(-1px); }
+  .bah-button-primary:disabled { opacity: 0.5; box-shadow: none; transform: none; }
+
+  .bah-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 font-medium transition-all;
+    border-radius: var(--bah-radius-sm);
+    border: 1px solid var(--bah-border-light);
+    background-color: rgba(255, 255, 255, 0.7);
+    color: var(--bah-text);
+  }
+  .bah-button-secondary:hover { background-color: rgba(255, 255, 255, 0.95); }
+
+  .bah-button-ghost {
+    @apply inline-flex items-center justify-center gap-2 transition-colors;
+    border-radius: var(--bah-radius-sm);
+    color: var(--bah-muted);
+  }
+  .bah-button-ghost:hover {
+    color: var(--bah-text-strong);
+    background-color: var(--bah-panel-soft);
+  }
+
+  /* Pill tags/badges. */
+  .bah-badge-accent,
+  .bah-badge-cyan,
+  .bah-tag {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+  }
+  .bah-badge-accent {
+    background-color: rgba(136, 194, 162, 0.18);
+    border-color: rgba(31, 107, 73, 0.22);
+    color: var(--bah-accent-text);
+  }
+  .bah-badge-cyan {
+    background-color: rgba(118, 183, 207, 0.18);
+    border-color: rgba(21, 95, 125, 0.22);
+    color: var(--bah-cyan-text);
+  }
+  .bah-tag {
+    background-color: var(--bah-panel-soft);
+    border-color: var(--bah-border);
+    color: var(--bah-muted);
+  }
+
+  .animate-bounce-slow { animation: bounce-slow 3s ease-in-out infinite; }
+  .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+  .animate-scale-in { animation: scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .animate-slide-up { animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-glow { animation: glow 2s ease-in-out infinite alternate; }
+  .animate-gradient { animation: gradient-shift 8s ease infinite; background-size: 200% 200%; }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(31, 107, 73, 0.22);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(21, 95, 125, 0.32); }
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+  50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes glow {
+  from { box-shadow: 0 0 12px rgba(136, 194, 162, 0.30); }
+  to { box-shadow: 0 0 26px rgba(118, 183, 207, 0.38); }
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Progressive delivery ────────────────────────────────────────────────────
+   The report assembles itself while the founder watches, so arrival needs to be
+   visible. Every rule here ends on the VISIBLE state: under prefers-reduced-motion
+   the duration collapses to ~0 and the element simply appears, so the information
+   survives and only the movement goes. Delays are zeroed there too — a staggered
+   card must not sit invisible waiting out a delay that no longer animates. */
+
+@keyframes bah-shimmer {
+  from { background-position: -160% 0; }
+  to   { background-position: 260% 0; }
+}
+@keyframes bah-signal-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bah-bloom {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--bah-accent-rgb), 0.55); }
+  100% { box-shadow: 0 0 0 10px rgba(var(--bah-accent-rgb), 0); }
+}
+@keyframes bah-sweep {
+  from { background-position: -130% 0; }
+  to   { background-position: 230% 0; }
+}
+@keyframes bah-count-pop {
+  0%   { transform: translateY(0.35em); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@layer utilities {
+  /* Placeholder for content the pipeline has not produced yet. */
+  .bah-skeleton {
+    background-color: rgba(var(--bah-accent-rgb), 0.07);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    border-radius: var(--bah-radius-sm);
+    animation: bah-shimmer 1.9s ease-in-out infinite;
+  }
+
+  /* A newly arrived signal card. `--bah-stagger` turns a batch into a cascade.
+     NO base `opacity: 0`, and `backwards` rather than `forwards`. This is the whole
+     difference between a decorative effect and data loss: `backwards` applies the
+     keyframe's `from` state only while the delay is running, so an animation that never
+     starts — suppressed paint, an ignored keyframe, a stalled delay — leaves the card at
+     its natural opacity and simply VISIBLE. The first version set `opacity: 0` in the
+     base rule and relied on the animation completing to reveal the content; a section
+     then rendered eleven cards that were all present, all transparent, and looked to the
+     founder like a broken page promising signals it would not show.
+     Content visibility must never depend on an animation running. */
+  .bah-signal-enter {
+    animation: bah-signal-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: var(--bah-stagger, 0ms);
+  }
+
+  /* Accent ring that blooms and decays once, marking what just landed.
+     --bah-accent is a FILL/BORDER token only; this never colours text. */
+  .bah-bloom { animation: bah-bloom 1200ms ease-out 1; }
+
+  /* A section receiving its first signal, and the brief landing at the end. */
+  .bah-sweep {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(var(--bah-accent-rgb), 0.20) 45%,
+      rgba(118, 183, 207, 0.18) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: bah-sweep 1100ms ease-out 1;
+  }
+
+  .bah-count-pop { animation: bah-count-pop 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+}
+
+/* Motion is decoration. Anything that loops or moves is disabled here —
+   AnalyzingScreen in particular ran a ping + pulse continuously for the
+   several minutes an analysis takes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    /* Without this a staggered card waits out a delay that no longer animates,
+       and simply never appears. */
+    animation-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bah-card-hover:hover,
+  .bah-button-primary:hover { transform: none; }
+  /* The shimmer loops for the length of a run. Leave the placeholder as a calm
+     block rather than a stalled gradient frame. */
+  .bah-skeleton { animation: none !important; background-image: none !important; }
+  .bah-sweep { background-image: none !important; }
+}
