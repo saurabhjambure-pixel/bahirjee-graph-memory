@@ -2,7 +2,7 @@
 
 Autonomous strategic intelligence for founders and strategy leaders, with Supabase-backed persistence and a FalkorDB memory graph shared by its agents.
 
-> **Graph Hacks (FalkorDB) judges:** start at [Graph Hacks submission — Agent Memory & Coordination](#graph-hacks-submission--agent-memory--coordination-falkordb). It covers the track, what was built during the hackathon, the graph model, the Cypher, and a local setup that needs no Supabase.
+> **Graph Hacks (FalkorDB) judges:** to try it, follow the **[judge guide](./docs/JUDGE_GUIDE.md)**. It covers the live app at https://bahirjee-graph-memory.vercel.app/ (sign in as `admin@bahirjee.in`, no password) and a 3-command local run. For how it works, start at [Graph Hacks submission — Agent Memory & Coordination](#graph-hacks-submission--agent-memory--coordination-falkordb). It covers the track, what was built during the hackathon, the graph model, the Cypher, and a local setup that needs no Supabase.
 
 ---
 
@@ -66,6 +66,7 @@ during the hackathon**, on 17–18 Oct 2026, in four commits in the private deve
 | `lib/_graph.js`: connection, per-tenant graph naming, schema, fail-closed reads | `lib/handlers/cron-daily.js`: the daily ladder writes Sessions, Findings, Evidence, Handoffs, Reads |
 | `lib/_graphTools.js`: the six fixed tools and their Cypher | `lib/handlers/gemini.js`: `graphAgentStep` (light-tier, schema-constrained tool picker) |
 | `lib/_graphWriter.js`: whitelisted MERGE writers | `src/services/promptUtils.js`: the tool-picker prompt |
+| `lib/_graphRunWriter.js`: a completed analysis run → Company, Entities, Session, Findings | `lib/_intelligenceWorker.js`: every completed run is written to the graph |
 | `lib/_graphAgent.js`: Reason → Tool → Observe loop, grounding check | `src/components/IntelligenceDashboard.jsx`: Ask Bahirjee asks the graph first |
 | `lib/handlers/graph.js`: `/api/graph` (`ask`, `activity`, `record_finding`) | `src/services/intelligenceService.js`: accepted answers are written back |
 | `src/services/graphMemory.js`: browser client + provenance line | `api/router.js`: route registration |
@@ -85,6 +86,19 @@ implementation anywhere in the codebase, so removing FalkorDB removes the capabi
 | Coordination: "who owns the pending work on ShipSwift?" | `next_agent`: pending `Handoff` → `Agent` traversal | Gone: handoffs were never recorded anywhere |
 | Change feed | `recent_changes` + `/api/graph activity` | Gone |
 
+**Where the graph is written.** Three live paths, all fail-open, all idempotent MERGEs:
+- **Every completed analysis run** (`lib/_intelligenceWorker.js` → `lib/_graphRunWriter.js`), after the
+  report is saved and the job completed: the `Company`, an `Entity` per tracked entity
+  (`Company-[:MONITORS]->Entity`), a `Session` (`kind: 'analysis_run'`, `sess:run:{run_id}`), and a
+  `Finding` per published signal, `ABOUT` its entity and `SUPPORTED_BY` an `Evidence` node for its
+  source URL. Ids derive from `run_id` plus a hash of the signal, so a retried worker re-merges instead
+  of duplicating. Bounded by `GRAPH_RUN_WRITE_BUDGET_MS` (default 8000); past it, writes stop and the
+  run is unaffected.
+- **The daily cron ladder** (`lib/handlers/cron-daily.js`): Sessions, Findings, Evidence, Handoffs, Reads.
+- **Ask Bahirjee write-back** (`/api/graph record_finding`): a confident answer becomes a Finding.
+
+`scripts/graph-seed.mjs` writes the synthetic demo tenant only.
+
 `MEMORY_GRAPH_ENABLED=0` is the removal test. Every graph read returns `graph_unavailable`
 and every write is skipped. The pre-existing Bahirjee product keeps running, and Ask Bahirjee drops
 back to its older context → web ladder with no memory. That fallback is the *old product*, not this
@@ -102,11 +116,14 @@ One named graph per tenant: **`bahirjee:{client_id}`**. The name is built only i
 from a UUID-validated `client_id` that `/api/graph` reads from the authenticated profile. A request
 body can never name a graph, so tenant isolation is the graph boundary itself.
 
+![A bahirjee tenant graph in FalkorDB Browser: 30 nodes and 41 edges across the ten labels below](./docs/images/falkordb-browser-tenant-graph.webp)
+
 ```mermaid
 graph LR
   Company -- MONITORS --> Entity
   Entity -- "DEPENDS_ON / COMPETES_WITH / PARTNERS_WITH / REGULATED_BY" --> Entity
   Finding -- ABOUT --> Entity
+  Finding -- SUPPORTED_BY --> Evidence
   Evidence -- ABOUT --> Entity
   Read -- ABOUT --> Entity
   Belief -- ABOUT --> Entity
@@ -124,9 +141,9 @@ graph LR
 | `Company` | `co:{client_id}` | `name`, `name_key`, `domain` |
 | `Entity` | `ent:{tracked_entity id}` | `name`, `name_key` (lowercased; the resolution key), `category` |
 | `Agent` | `agt:{name}` | `name` (`watcher` / `triage` / `pursuer`), `role` |
-| `Session` | `sess:daily:{client}:{date}` | `kind`, `started_ts` |
-| `Finding` | `fnd:{seed}` | `headline`, `ts` |
-| `Evidence` | `ev:{…}` | `url`, `ts`, `provenance` (`source_watch` / `read` / `ask_bahirjee`) |
+| `Session` | `sess:daily:{client}:{date}` / `sess:run:{run_id}` | `kind` (`daily_ladder` / `analysis_run`), `started_ts`; runs add `run_id`, `report_id` |
+| `Finding` | `fnd:{seed}` (runs: `fnd:run:{run_id}:{hash}`) | `headline`, `url`, `ts`, `provenance` |
+| `Evidence` | `ev:{…}` | `url`, `ts`, `provenance` (`source_watch` / `analysis_run` / `read` / `ask_bahirjee`) |
 | `Read` | `read:{read id}` | `headline`, `confidence`, `ts` |
 | `Question` | `q:{question id}` | `question`, `watch_for`, `status` |
 | `Handoff` | `ho:{seed}` | `status` (`pending` / `done`), `reason`, `created_ts`, `completed_ts` |

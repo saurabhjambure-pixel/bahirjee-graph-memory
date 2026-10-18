@@ -23,6 +23,7 @@ import { __setGraphClientForTests, graphNameFor, isGraphEnabled } from '../lib/_
 import { runGraphTool } from '../lib/_graphTools.js';
 import { askGraph, answerIsGrounded } from '../lib/_graphAgent.js';
 import { graphWriteQaFinding } from '../lib/_graphWriter.js';
+import { graphWriteAnalysisRun, signalSeed } from '../lib/_graphRunWriter.js';
 
 const CLIENT_A = '11111111-1111-4111-8111-111111111111';
 const CLIENT_B = '22222222-2222-4222-8222-222222222222';
@@ -227,6 +228,104 @@ await check('disabled env returns graph_unavailable without any query', async ()
         assert.ok(fake.calls.every((c) => c.graph !== `bahirjee:${CLIENT_B}`), 'tenant B graph never touched');
     });
 }
+
+// ── Analysis run → graph ─────────────────────────────────────────────────────
+
+const RUN_ID = 'run-abc-123';
+const RUN_REPORT = {
+    id: 'rep-1',
+    timestamp: '2026-10-18T09:00:00.000Z',
+    inputs: { websiteUrl: 'https://www.acmefreight.example' },
+    context: { company_name: 'Acme Freight' },
+    contextLayer: {
+        trackedEntities: [
+            { name: 'ShipSwift', category: 'competitor' },
+            { name: 'FreshFare', category: 'customer' },
+        ],
+    },
+    signals: [
+        { signal_headline: 'ShipSwift cuts prices 20%', entity_involved: 'ShipSwift', source_url: 'https://news.example/a', category: 'pricing' },
+        { signal_headline: 'FreshFare opens a second warehouse', entity_involved: 'FreshFare', source_url: 'https://news.example/b', category: 'expansion' },
+    ],
+};
+
+const mergedIds = (fake, label) => fake.calls
+    .filter((c) => c.kind === 'query' && new RegExp(`MERGE \\(n:${label} \\{id: \\$id\\}\\)`).test(c.cypher))
+    .map((c) => c.params.id);
+
+{
+    const fake = makeFakeClient([]);
+    __setGraphClientForTests(fake);
+
+    await check('a persisted run writes Company, Session, Entities and Findings', async () => {
+        const r = await graphWriteAnalysisRun(CLIENT_A, {
+            runId: RUN_ID, reportId: 'rep-1', report: RUN_REPORT, websiteUrl: 'https://www.acmefreight.example',
+        });
+        assert.deepEqual(r, { company: true, session: true, entities: 2, findings: 2 });
+
+        assert.deepEqual(mergedIds(fake, 'Company'), [`co:${CLIENT_A}`]);
+        const company = fake.calls.find((c) => /MERGE \(n:Company/.test(c.cypher));
+        assert.equal(company.params.props.name, 'Acme Freight');
+        assert.equal(company.params.props.domain, 'acmefreight.example');
+
+        assert.deepEqual(mergedIds(fake, 'Session'), [`sess:run:${RUN_ID}`]);
+        const session = fake.calls.find((c) => /MERGE \(n:Session/.test(c.cypher));
+        assert.equal(session.params.props.kind, 'analysis_run');
+        assert.equal(session.params.props.report_id, 'rep-1');
+
+        assert.ok(mergedIds(fake, 'Entity').includes('ent:shipswift'));
+        assert.ok(mergedIds(fake, 'Entity').includes('ent:freshfare'));
+
+        const findings = mergedIds(fake, 'Finding');
+        assert.deepEqual(new Set(findings), new Set(RUN_REPORT.signals.map((s) => `fnd:${signalSeed(RUN_ID, s)}`)));
+        const finding = fake.calls.find((c) => /MERGE \(n:Finding/.test(c.cypher) && c.params.props.headline.startsWith('ShipSwift'));
+        assert.equal(finding.params.props.url, 'https://news.example/a');
+        assert.equal(finding.params.props.provenance, 'analysis_run');
+        assert.equal(finding.params.props.run_id, RUN_ID);
+
+        const edges = fake.calls.filter((c) => /MERGE \(a\)-\[r:/.test(c.cypher));
+        const has = (rel, a, b) => edges.some((c) => c.cypher.includes(`[r:${rel}]`) && c.params.a === a && c.params.b === b);
+        const fShip = `fnd:${signalSeed(RUN_ID, RUN_REPORT.signals[0])}`;
+        assert.ok(has('MONITORS', `co:${CLIENT_A}`, 'ent:shipswift'), 'Company-MONITORS->Entity');
+        assert.ok(has('ABOUT', fShip, 'ent:shipswift'), 'Finding-ABOUT->Entity');
+        assert.ok(has('SUPPORTED_BY', fShip, `ev:${signalSeed(RUN_ID, RUN_REPORT.signals[0])}`), 'Finding-SUPPORTED_BY->Evidence');
+
+        assert.ok(fake.calls.every((c) => c.graph === `bahirjee:${CLIENT_A}`), 'all writes on tenant A graph');
+    });
+
+    await check('a retried run re-merges the same ids (no duplicate nodes)', async () => {
+        const before = new Set(fake.calls.filter((c) => /^MERGE \(n:/.test(c.cypher)).map((c) => c.params.id));
+        await graphWriteAnalysisRun(CLIENT_A, { runId: RUN_ID, reportId: 'rep-1', report: RUN_REPORT });
+        const after = new Set(fake.calls.filter((c) => /^MERGE \(n:/.test(c.cypher)).map((c) => c.params.id));
+        assert.deepEqual(after, before);
+    });
+}
+
+await check('run write is a no-op when MEMORY_GRAPH_ENABLED is off', async () => {
+    const fake = makeFakeClient([]);
+    __setGraphClientForTests(fake);
+    const was = process.env.MEMORY_GRAPH_ENABLED;
+    process.env.MEMORY_GRAPH_ENABLED = '0';
+    const r = await graphWriteAnalysisRun(CLIENT_A, { runId: RUN_ID, reportId: 'rep-1', report: RUN_REPORT });
+    process.env.MEMORY_GRAPH_ENABLED = was;
+    assert.equal(r, null);
+    assert.equal(fake.calls.length, 0, 'no query reached the graph while disabled');
+});
+
+await check('a hung graph cannot hold the run past the write budget', async () => {
+    // Answers only after 400ms — far past the 50ms budget, short enough not to hold the
+    // test process open on the abandoned write.
+    const slow = () => new Promise((resolve) => setTimeout(() => resolve({ data: [] }), 400));
+    const hung = {
+        selectGraph: () => ({ query: slow, roQuery: slow }),
+        close: () => Promise.resolve(),
+    };
+    __setGraphClientForTests(hung);
+    const t0 = Date.now();
+    const r = await graphWriteAnalysisRun(CLIENT_A, { runId: RUN_ID, reportId: 'rep-1', report: RUN_REPORT, budgetMs: 50 });
+    assert.equal(r, null);
+    assert.ok(Date.now() - t0 < 300, `returned in ${Date.now() - t0}ms`);
+});
 
 // ── Agent loop ───────────────────────────────────────────────────────────────
 
