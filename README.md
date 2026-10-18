@@ -1,6 +1,6 @@
 # Bahirjee Intelligence Platform
 
-Autonomous strategic intelligence for founders and strategy leaders, with admin-controlled operations and Supabase-backed persistence.
+Autonomous strategic intelligence for founders and strategy leaders, with Supabase-backed persistence and a FalkorDB memory graph shared by its agents.
 
 > **Graph Hacks (FalkorDB) judges:** start at [Graph Hacks submission — Agent Memory & Coordination](#graph-hacks-submission--agent-memory--coordination-falkordb). It covers the track, what was built during the hackathon, the graph model, the Cypher, and a local setup that needs no Supabase.
 
@@ -59,7 +59,7 @@ They write what they learn and hand off into it, and questions are answered by t
 
 Bahirjee itself (the intelligence pipeline, Supabase schema, React app) existed before 15 Oct
 2026, and it is the host this submission plugs into. **Everything graph-related was written
-during the hackathon**, on 17–18 Oct 2026, in four commits in the private development repository (squashed into this repo's single commit). The design plan and the implementation log with live-test results are in [docs/graph-hacks/](./docs/graph-hacks/). It comes to about 2,500 lines across these files:
+during the hackathon**, on 17–18 Oct 2026, in four commits in the private development repository, squashed here into commit `b0bb208` (the runnable Cypher docs followed in `114d5f6`). The design plan and the implementation log with live-test results are in [docs/graph-hacks/](./docs/graph-hacks/). It comes to about 2,500 lines across these files:
 
 | New | Changed (integration points) |
 | :--- | :--- |
@@ -291,8 +291,11 @@ Open the FalkorDB Browser at http://localhost:3000 and select graph
 queries in [docs/graph-hacks/queries.cypher](./docs/graph-hacks/queries.cypher) one at a time.
 
 **Full app** (Ask Bahirjee in the browser, the daily ladder): this also needs a Supabase project
-(`schema.sql` + `scripts/migrations/`) and the variables in `.env.example`. See
-[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). Locally, `DEV_AUTH_BYPASS=true`,
+and the variables in `.env.example`. Apply `schema.sql`, the five `scripts/migrations/v6_*.sql`
+files and `sql/context_signals_schema.sql`, then paste `sql/install_v7_to_v38_and_seed.sql` (every
+later migration plus the seed) in one go. The full order is in
+[docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). Sign-in is a single account: only `LOGIN_EMAIL`
+(default `admin@bahirjee.in`) gets in, instantly and with no email sent. Locally, `DEV_AUTH_BYPASS=true`,
 `VITE_DEV_AUTH_BYPASS=true` and `DEV_BYPASS_CLIENT_ID=00000000-0000-4000-8000-00000000000d` point the
 app at the seeded tenant without a login.
 
@@ -330,6 +333,7 @@ npm run test:graph         # memory-graph outcome matrix (fake FalkorDB, no netw
 npm run test:router        # api/router.js dispatch, including the /api/graph route
 npm run test:cron-daily    # the daily ladder that writes Sessions, Findings and Handoffs
 npm run test:ask           # Ask Bahirjee, which asks the graph first
+npm run test:supabase-url  # Supabase URL normalisation at every createClient call site
 ```
 
 ---
@@ -342,7 +346,6 @@ npm run test:ask           # Ask Bahirjee, which asks the graph first
 - [lib/_intelligenceWorker.js](./lib/_intelligenceWorker.js) — Stepped pipeline driver
 - [src/services/intelligenceService.js](./src/services/intelligenceService.js) — 11-step pipeline orchestrator
 - [src/components/IntelligenceDashboard.jsx](./src/components/IntelligenceDashboard.jsx) — Main founder UI state machine
-- [src/pages/admin/ClientDetail.jsx](./src/pages/admin/ClientDetail.jsx) — Admin client management & intelligence runner
 - [schema.sql](./schema.sql) — System of record database schema
 - [lib/_graph.js](./lib/_graph.js) — FalkorDB connection, per-tenant graph naming, disabled path
 - [lib/handlers/graph.js](./lib/handlers/graph.js) — `/api/graph`: `ask`, `activity`, `record_finding`
