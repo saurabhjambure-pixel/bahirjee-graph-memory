@@ -268,24 +268,31 @@ ON CONFLICT DO NOTHING;
 --     is a real product of this client was written by a product run's persist: it goes
 --     back to that product. Everything else is the company's. (Compared as text so a
 --     malformed _product.target_id cannot abort the migration with a uuid cast error.)
-CREATE TEMP TABLE v38_dest ON COMMIT DROP AS
-SELECT c.id,
-    COALESCE(
-        (SELECT p.id FROM public.intelligence_targets p
-         WHERE p.client_id = c.client_id AND p.type = 'product'
-           AND p.id::text = c.context->'_product'->>'target_id'),
-        (SELECT t.id FROM public.intelligence_targets t
-         WHERE t.client_id = c.client_id AND t.target_domain = c.target_domain
-           AND t.type = 'company' AND t.status <> 'archived'
-         LIMIT 1)
-    ) AS dest
-FROM public.company_contexts c
-WHERE c.target_id IS NULL;
+--
+--     Inlined as a CTE in 3c and 3d rather than held in a TEMP ... ON COMMIT DROP table:
+--     the Supabase SQL editor commits each statement on its own, which dropped the temp
+--     table before 3c could read it ("relation v38_dest does not exist"). Computing it
+--     twice is equivalent: 3c changes only is_current, which this mapping never reads.
 
 -- 3c. One current row per target, counting the NULL rows by their destination.
 --     Newest wins: a NULL row was always the most recent write for its domain.
 --     Demote BEFORE re-pointing, or the re-point trips uq_company_contexts_current_target.
-WITH cand AS (
+WITH
+    v38_dest AS (
+        SELECT c.id,
+            COALESCE(
+                (SELECT p.id FROM public.intelligence_targets p
+                 WHERE p.client_id = c.client_id AND p.type = 'product'
+                   AND p.id::text = c.context->'_product'->>'target_id'),
+                (SELECT t.id FROM public.intelligence_targets t
+                 WHERE t.client_id = c.client_id AND t.target_domain = c.target_domain
+                   AND t.type = 'company' AND t.status <> 'archived'
+                 LIMIT 1)
+            ) AS dest
+        FROM public.company_contexts c
+        WHERE c.target_id IS NULL
+    ),
+cand AS (
     SELECT c.id, COALESCE(c.target_id, d.dest) AS tgt, c.created_at
     FROM public.company_contexts c
     LEFT JOIN v38_dest d ON d.id = c.id
@@ -302,6 +309,21 @@ FROM ranked r
 WHERE r.id = c.id AND r.rn > 1;
 
 -- 3d. Re-point.
+WITH
+    v38_dest AS (
+        SELECT c.id,
+            COALESCE(
+                (SELECT p.id FROM public.intelligence_targets p
+                 WHERE p.client_id = c.client_id AND p.type = 'product'
+                   AND p.id::text = c.context->'_product'->>'target_id'),
+                (SELECT t.id FROM public.intelligence_targets t
+                 WHERE t.client_id = c.client_id AND t.target_domain = c.target_domain
+                   AND t.type = 'company' AND t.status <> 'archived'
+                 LIMIT 1)
+            ) AS dest
+        FROM public.company_contexts c
+        WHERE c.target_id IS NULL
+    )
 UPDATE public.company_contexts c
 SET target_id = d.dest
 FROM v38_dest d

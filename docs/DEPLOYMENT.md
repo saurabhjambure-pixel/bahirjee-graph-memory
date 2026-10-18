@@ -46,7 +46,7 @@ Configure these variables in your Vercel Project Settings and local `.env` file.
 | `PARALLEL_AI_API_KEY` | **Yes** | Parallel AI Extract primary scraper key | `pk-...` |
 | `EXA_API_KEY` | **Yes** | Exa neural search & fallback scraping key | `exa-...` |
 | `INTERNAL_API_KEY` | **Yes** | Secret for worker self-triggering M2M auth | Any random 32-char hex string |
-| `ADMIN_EMAILS` | **Yes** | Comma-separated list of platform admin emails | `admin@bahirjee.in,ops@bahirjee.in` |
+| `LOGIN_EMAIL` | No | The ONE email allowed to sign in (instantly, no password). Every other email is refused. | `admin@bahirjee.in` (default) |
 | `CRON_SECRET` | **Yes** | Vercel sends it as `Authorization: Bearer …` on the two crons in `vercel.json` only when it is set, so without it every scheduled run gets 401 | Any random 32+ char string |
 | `ALLOWED_ORIGINS` | No | EXTRA CORS origins only — the deployment's own origin is trusted automatically | `https://bahirjee.in,https://app.bahirjee.in` |
 | `MEMORY_GRAPH_ENABLED` | No | `1` turns on the FalkorDB memory graph; anything else = degraded mode | `1` |
@@ -55,7 +55,6 @@ Configure these variables in your Vercel Project Settings and local `.env` file.
 | `KV_REST_API_TOKEN` | Rec. | Upstash Redis REST Token | `AX...` |
 | `STEP_MAX_MS` | No | Max execution milliseconds per worker step | `45000` |
 | `STEPPED_PIPELINE` | No | Enable stepped worker pipeline (`1` default) | `1` |
-| `AUTO_ACCESS_DOMAINS` | No | Comma-separated domains granted instant access | `bahirjee.in` |
 | `SITE_URL` | No | App redirect URL for magic link confirmation | `https://bahirjee.in` |
 
 > [!WARNING]
@@ -75,11 +74,11 @@ against an empty Postgres 16 with Supabase's `auth` schema and roles stubbed:
 2. `scripts/migrations/v6_phase1_observations.sql`, `v6_phase2_patterns.sql`, `v6_phase3_shifts.sql`, `v6_phase4_blindspots_opportunities.sql`, `v6_phase7_impact.sql`
 3. `sql/context_signals_schema.sql`
 4. `scripts/migrations/v7_*` through `v38_*` in numeric order. Where two files share a number, either order works: `v8_company_memory` then `v8_company_memory_backfill`; both `v15_*`; both `v16_*`; both `v17_*`; both `v18_*`.
-5. Seeds: `sql/seed_bahirjee_in_domain.sql`, then `sql/seed_admin_access.sql`. Never run `sql/seed_dev_bypass_user.sql` in production.
+5. Seed: `sql/seed_bahirjee_in_domain.sql`. Never run `sql/seed_dev_bypass_user.sql` in production.
 
 Every file is idempotent. `v37_intelligence_targets.sql` carries its own `BEGIN; … COMMIT;` — paste it whole.
 
-Pasting 46 files into the SQL editor is error-prone; with the project's **direct** connection
+Pasting 45 files into the SQL editor is error-prone; with the project's **direct** connection
 string (Project Settings → Database → Connection string → URI) the same order runs in one go:
 
 ```bash
@@ -87,30 +86,24 @@ export SUPABASE_DB_URL='postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:54
 M=scripts/migrations
 for f in schema.sql $M/v6_*.sql sql/context_signals_schema.sql \
          $(ls $M/v*.sql | grep -v '/v6_' | sort -t v -k2 -n) \
-         sql/seed_bahirjee_in_domain.sql sql/seed_admin_access.sql; do
+         sql/seed_bahirjee_in_domain.sql; do
   echo "== $f"; psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || break
 done
 ```
 
 ### 3.2 Seeding notes
-- `sql/seed_admin_access.sql` creates `admin@bahirjee.in` with a testing-default password.
-  > [!IMPORTANT]
-  > Change the seeded default password immediately after initial login via `/admin/reset`.
-- `sql/seed_bahirjee_in_domain.sql` creates the `bahirjee.in` client so `AUTO_ACCESS_DOMAINS` users attach to an org.
+- `sql/seed_bahirjee_in_domain.sql` creates the `bahirjee.in` client. The sign-in account (`LOGIN_EMAIL`) is created on its first sign-in and attached to this client as a full member; there is no admin account.
 
 ### 3.3 Verify
 ```sql
 select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';  -- 39
 select 1 from public.intelligence_targets limit 1;                             -- no error = v37 applied
-select email, role from public.email_allowlist where role = 'admin';            -- the seeded admin
+select domain from public.clients where domain = 'bahirjee.in';               -- the sign-in workspace
 ```
 
 ### 3.4 Supabase Dashboard Configuration
-- **Auth Settings -> URL Configuration**:
-  - Site URL: `https://your-domain.com`
-  - Redirect URLs: Add `https://your-domain.com/**` and `http://localhost:5173/**`
-- **SMTP Settings**:
-  - Configure a production SMTP provider (SendGrid, Postmark, AWS SES). The default Supabase email service is strictly rate-limited to ~3-4 emails per hour and will block magic links under production traffic.
+- No email or SMTP setup is needed for sign-in: `/api/auth-link` mints a sign-in token server-side and the browser verifies it directly, so no email is sent.
+- **Auth → URL Configuration**: set Site URL to the production domain (only used by Supabase's own emails, which this flow never triggers).
 
 ---
 
@@ -171,9 +164,9 @@ npm run build
 ```
 
 ### 5.2 Live Smoke Test Checklist
-1. **Admin Sign-in**:
-   - Navigate to `/admin/login`.
-   - Sign in with admin credentials. Confirm redirect to `/admin/clients`.
+1. **Sign-in**:
+   - On `/`, enter `admin@bahirjee.in` (or your `LOGIN_EMAIL`). Confirm you land in the app with no email step.
+   - Enter any other email. Confirm "This email doesn't have access." 
 2. **Founder Intake & Context Build**:
    - Open `/` in an incognito window.
    - Enter a test target company URL.

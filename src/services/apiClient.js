@@ -27,10 +27,9 @@ export async function refreshAccessToken() {
     }
 }
 
-// Redirect target when the session is gone: admins → /admin/login, founders → /.
+// Redirect target when the session is gone.
 function loginPathForCurrentArea() {
-    if (typeof window === 'undefined') return '/';
-    return window.location.pathname.startsWith('/admin') ? '/admin/login' : '/';
+    return '/';
 }
 
 async function handleUnauthorized() {

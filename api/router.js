@@ -96,7 +96,6 @@ const handlers = {
   intelligence: () => import('../lib/handlers/intelligence.js').then((mod) => mod.handler),
   'intelligence-worker': () => import('../lib/handlers/intelligence-worker.js').then((mod) => mod.handler),
   'intelligence-targets': () => import('../lib/handlers/intelligence-targets.js').then((mod) => mod.handler),
-  'admin-users': () => import('../lib/handlers/admin-users.js').then((mod) => mod.handler),
   'auth-link': () => import('../lib/handlers/auth-link.js').then((mod) => mod.handler),
   'brief-access': () => import('../lib/handlers/brief-access.js').then((mod) => mod.handler),
   report: () => import('../lib/handlers/report.js').then((mod) => mod.handler),

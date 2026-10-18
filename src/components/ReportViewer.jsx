@@ -98,11 +98,7 @@ export default function ReportViewer() {
                 // Auth state change re-renders this page with the brief loaded.
                 return;
             }
-            if (result?.emailSent) {
-                setGateNotice('Check your email for a secure sign-in link.');
-            } else {
-                setGateError("This brief isn't shared with your email domain.");
-            }
+            setGateError("This email doesn't have access.");
         } catch (err) {
             setGateError(err.message || 'Unable to sign you in.');
         } finally {

@@ -1,13 +1,9 @@
 -- ============================================================================
--- Seed: bahirjee.in as an approved (auto-access) client domain
+-- Seed: the bahirjee.in workspace
 -- ----------------------------------------------------------------------------
--- Any @bahirjee.in user signs in INSTANTLY (no password, no magic-link click) via
--- /api/auth-link's auto-access path. For that to attach them to an org (so they can
--- see that org's reports), a client with domain='bahirjee.in' must exist. On first
--- sign-in, handle_new_user() matches this domain and provisions their profile as a
--- client_user of this client.
---
--- Also ensure AUTO_ACCESS_DOMAINS includes bahirjee.in in env (it is the default).
+-- The one account allowed to sign in (LOGIN_EMAIL, default admin@bahirjee.in) is
+-- attached to the client whose domain matches it. /api/auth-link refuses to sign it in
+-- until this row exists.
 --
 -- Idempotent — safe to re-run. Run in the Supabase SQL editor AFTER schema.sql.
 -- ============================================================================
