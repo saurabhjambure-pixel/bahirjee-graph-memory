@@ -2,7 +2,7 @@
 
 Autonomous strategic intelligence for founders and strategy leaders, with Supabase-backed persistence and a FalkorDB memory graph shared by its agents.
 
-> **Graph Hacks (FalkorDB) judges:** start at [Graph Hacks submission — Agent Memory & Coordination](#graph-hacks-submission--agent-memory--coordination-falkordb). It covers the track, what was built during the hackathon, the graph model, the Cypher, and a local setup that needs no Supabase.
+> **Graph Hacks (FalkorDB) judges:** to try it, follow the **[judge guide](./docs/JUDGE_GUIDE.md)**. It covers the live app at https://bahirjee-graph-memory.vercel.app/ (sign in as `admin@bahirjee.in`, no password) and a 3-command local run. For how it works, start at [Graph Hacks submission — Agent Memory & Coordination](#graph-hacks-submission--agent-memory--coordination-falkordb). It covers the track, what was built during the hackathon, the graph model, the Cypher, and a local setup that needs no Supabase.
 
 ---
 
@@ -115,6 +115,8 @@ by querying the graph. That is the next step, not something this submission clai
 One named graph per tenant: **`bahirjee:{client_id}`**. The name is built only in `lib/_graph.js`,
 from a UUID-validated `client_id` that `/api/graph` reads from the authenticated profile. A request
 body can never name a graph, so tenant isolation is the graph boundary itself.
+
+![A bahirjee tenant graph in FalkorDB Browser: 30 nodes and 41 edges across the ten labels below](./docs/images/falkordb-browser-tenant-graph.webp)
 
 ```mermaid
 graph LR
