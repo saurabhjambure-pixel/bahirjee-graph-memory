@@ -10,8 +10,7 @@ const DEV_AUTH_BYPASS = import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_BYP
 const DEV_MOCK_USER = { id: '00000000-0000-0000-0000-0000000000de', email: 'dev@bahirjee.local' };
 const DEV_MOCK_PROFILE = {
     id: '00000000-0000-0000-0000-0000000000de',
-    // Founder flow by default (so intake→context renders). Set VITE_DEV_BYPASS_ROLE=admin for the admin console.
-    role: import.meta.env.VITE_DEV_BYPASS_ROLE || 'client_user',
+    role: 'client_user',
     full_name: 'Dev Tester',
     client_id: null, is_active: true, is_premium: true, run_count: 0, client: null
 };
@@ -28,7 +27,7 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (DEV_AUTH_BYPASS) {
-            console.warn('[DEV] Auth bypass active — mock admin session, no Supabase login.');
+            console.warn('[DEV] Auth bypass active — mock session, no Supabase login.');
             return;
         }
         if (!supabase) {
@@ -70,7 +69,7 @@ export function AuthProvider({ children }) {
                     console.warn('[Auth] Inactive account — signing out.');
                     profileUserIdRef.current = null;
                     setProfile(null);
-                    setProfileError('Your account has been deactivated. Contact an administrator.');
+                    setProfileError('Your account has been deactivated.');
                     await supabase.auth.signOut();
                     return;
                 }
@@ -115,16 +114,10 @@ export function AuthProvider({ children }) {
         return () => subscription?.unsubscribe();
     }, []);
 
-    // The four actions below are useCallback([])-stable on purpose: each closes over only
+    // The three actions below are useCallback([])-stable on purpose: each closes over only
     // module-level values (supabase, DEV_AUTH_BYPASS), its own arguments, and setState
     // setters — never over `user`/`profile`/`loading` — so there is no stale-closure risk,
     // and the memoized context value below can stay referentially stable across renders.
-    const signIn = useCallback(async (email, password) => {
-        if (!supabase) throw new Error("Supabase not configured. Check env vars.");
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        return data;
-    }, []);
 
     // Sets the current user's display name via a narrow SECURITY DEFINER RPC
     // (direct profile UPDATEs are blocked by RLS). Updates local state on success.
@@ -137,21 +130,21 @@ export function AuthProvider({ children }) {
         setProfile(prev => (prev ? { ...prev, full_name: trimmed } : prev));
     }, []);
 
-    const requestAuthLink = useCallback(async (email, mode = 'signin', redirectTo) => {
+    const requestAuthLink = useCallback(async (email) => {
         const response = await fetch('/api/auth-link', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, mode })
+            body: JSON.stringify({ email })
         });
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(data?.error || 'Unable to authenticate approved account');
+            throw new Error(data?.error || 'Unable to sign in');
         }
 
-        // Frictionless domain access: the server minted a magic-link token — verify it
+        // The server minted a magic-link token for the one allowed account — verify it
         // right away to establish a session (no email click). onAuthStateChange then
         // loads the profile and the app re-renders signed in.
         if (data.autoAccess && data.tokenHash && supabase) {
@@ -190,13 +183,11 @@ export function AuthProvider({ children }) {
         user,
         profile,
         profileError,
-        isAdmin: profile?.role === 'admin',
         loading,
-        signIn,
         requestAuthLink,
         updateFullName,
         signOut
-    }), [user, profile, profileError, loading, signIn, requestAuthLink, updateFullName, signOut]);
+    }), [user, profile, profileError, loading, requestAuthLink, updateFullName, signOut]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

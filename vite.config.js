@@ -7,11 +7,7 @@ export default defineConfig({
   // (a second dev server, another checkout) collide instead of coexisting. Honouring
   // PORT lets the harness assign a free one; 5173 stays the default when nothing is set.
   //
-  // ⚠️  One flow still assumes 5173: lib/handlers/auth-link.js falls back to
-  //     'http://localhost:5173/' for a magic link's emailRedirectTo, because that is what
-  //     Supabase's redirect allowlist matches. Testing SELF-SERVE signup locally therefore
-  //     needs the server on 5173. Instant-access domains (AUTO_ACCESS_DOMAINS) verify a
-  //     token hash directly and work on any port.
+  // Sign-in verifies a token hash directly (lib/handlers/auth-link.js), so it works on any port.
   server: {
     port: Number(process.env.PORT) || 5173,
   },

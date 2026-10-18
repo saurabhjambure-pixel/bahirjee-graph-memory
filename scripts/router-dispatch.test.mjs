@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { resolveRouteHandler } from '../api/router.js'
 
-const cases = ['gemini', 'search', 'jev', 'sarvam', 'intelligence-worker', 'admin-users', 'cron-runs']
+const cases = ['gemini', 'search', 'jev', 'sarvam', 'intelligence-worker', 'auth-link', 'cron-runs']
 
 for (const route of cases) {
   const handler = await resolveRouteHandler(route)

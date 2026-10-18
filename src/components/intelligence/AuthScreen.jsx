@@ -18,14 +18,14 @@ export default function AuthScreen({
           <h1 className="text-2xl font-display font-semibold text-bah tracking-tight">
             b<span className="text-bah-accent font-medium">a</span>h<span className="text-bah-cyan font-medium">i</span>rjee <span className="text-bah-muted">Intelligence</span>
           </h1>
-          <p className="text-bah-muted text-sm mt-2">Enter your work email to continue</p>
+          <p className="text-bah-muted text-sm mt-2">Enter your email to continue</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="Work email"
+            placeholder="Email"
             required
             autoComplete="email"
             className="w-full bg-bah-panel-soft border border-bah rounded-xl px-4 py-3 text-bah placeholder-bah-muted-2 focus:border-[var(--bah-accent)] outline-none transition-all"
@@ -33,13 +33,9 @@ export default function AuthScreen({
           {authError && <p className="text-bah-danger text-xs text-center">{authError}</p>}
           {authNotice && <p className="text-bah-accent-strong text-xs text-center">{authNotice}</p>}
           <button type="submit" className="w-full bah-button-primary py-3 rounded-xl shadow-lg">
-            Send secure link
+            Continue
           </button>
         </form>
-        <p className="text-xs text-bah-muted-2 text-center">
-          We'll email you a secure sign-in link. Your workspace is scoped to your company
-          domain and shared with colleagues who sign up.
-        </p>
       </div>
     </div>
   );

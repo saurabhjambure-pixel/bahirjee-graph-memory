@@ -646,11 +646,9 @@ export const SignalCard = ({ signal, onAsk, filter, profile, onUpgrade }) => {
 
 
 
-import { useNavigate } from 'react-router-dom';
 
 export default function IntelligenceDashboard() {
-    const { user, profile, profileError, isAdmin, loading: authLoading, requestAuthLink, updateFullName, signOut } = useAuth();
-    const navigate = useNavigate();
+    const { user, profile, profileError, loading: authLoading, requestAuthLink, updateFullName, signOut } = useAuth();
 
     // Dev-only. This previously logged the whole `profile` object on every auth state
     // change in production — email, client_id, role and premium flags, readable in any
@@ -658,16 +656,8 @@ export default function IntelligenceDashboard() {
     // build, so this whole block is dead-code-eliminated there.
     useEffect(() => {
         if (!import.meta.env.DEV) return;
-        console.log('[Auth]', { email: user?.email, role: profile?.role, isAdmin });
-    }, [user, profile, isAdmin]);
-
-    // Admin Redirect
-    useEffect(() => {
-        if (!authLoading && user && isAdmin) {
-            console.log("Redirecting to Admin...");
-            navigate('/admin');
-        }
-    }, [user, isAdmin, authLoading, navigate]);
+        console.log('[Auth]', { email: user?.email, role: profile?.role });
+    }, [user, profile]);
 
     const [email, setEmail] = useState('');
     const [authError, setAuthError] = useState(null);
@@ -1017,7 +1007,7 @@ export default function IntelligenceDashboard() {
     // progress". Reconnect once on load so the poll effect above can pick it back up.
     const recoveredActiveJobRef = useRef(false);
     useEffect(() => {
-        if (authLoading || !user || isAdmin || recoveredActiveJobRef.current) return;
+        if (authLoading || !user || recoveredActiveJobRef.current) return;
         // View-only users never own a job — don't poll on their behalf.
         if (profile?.role === 'brief_viewer') return;
         if (phase !== 'idle' || activeJobId) return;
@@ -1048,7 +1038,7 @@ export default function IntelligenceDashboard() {
                 console.warn('[IntelligenceDashboard] Active job reconnect failed:', error.message);
             }
         })();
-    }, [authLoading, user, isAdmin, profile?.role, phase, activeJobId]);
+    }, [authLoading, user, profile?.role, phase, activeJobId]);
 
     // Filter history based on search term
     const [selectedMonth, setSelectedMonth] = useState('All'); // History Month Filter
@@ -1090,24 +1080,6 @@ export default function IntelligenceDashboard() {
         return ['All', ...Array.from(months)];
     }, [history]);
 
-    // The server returns a stable machine code, never user copy. A refused personal
-    // address is not the same failure as an unapproved company, and telling someone on
-    // gmail to "ask an admin" sends them nowhere.
-    const noAccessMessage = (reason) => {
-        switch (reason) {
-            case 'personal_email':
-            case 'disposable_email':
-                return 'Bahirjee needs a work email — your workspace is scoped to your company domain.';
-            case 'shared_institution':
-                return 'That domain is shared by many unrelated people, so it cannot become a single workspace. Use a company address, or ask us to set you up.';
-            case 'blocked_domain':
-            case 'invalid_domain':
-                return "That email address can't be used to sign in. Check it, or ask us to set you up.";
-            default:
-                return "That email isn't on an approved domain yet. Ask an admin to add you, or use /admin/login if you're an admin.";
-        }
-    };
-
     /**
      * Persist the assumptions the founder chose to track after reading the brief.
      *
@@ -1143,7 +1115,8 @@ export default function IntelligenceDashboard() {
         }
     };
 
-    // Founder auth is a single passwordless magic-link path (no signin/signup split).
+    // Single-account sign-in: the server either signs the one allowed email in at once
+    // or refuses it. No email is ever sent.
     const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
@@ -1151,29 +1124,16 @@ export default function IntelligenceDashboard() {
 
         const trimmedEmail = email.trim().toLowerCase();
         if (!trimmedEmail) {
-            setAuthError('Please enter your approved work email.');
+            setAuthError('Please enter your email.');
             return;
         }
 
         try {
             const result = await requestAuthLink(trimmedEmail);
-            // Three outcomes from the server, and only one of them means an email is on
-            // the way. The other two used to fall through to the same "check your email"
-            // notice as a real send — which is wrong, because nothing was sent.
-            if (result?.signedIn) {
-                // Auto-access domain: the auth state change re-renders into the app.
-            } else if (result?.adminRedirect) {
-                setAuthError('Admin accounts sign in at /admin/login, not here.');
-            } else if (result?.noAccess) {
-                setAuthError(noAccessMessage(result.reason));
-            } else if (result?.selfServe) {
-                // Say plainly that the workspace is shared with their domain. Anyone else
-                // at the same company who signs up lands in it and can read these briefs —
-                // that must never be something they discover afterwards.
-                setAuthNotice(`Check your email for a secure sign-in link. Your workspace is shared with everyone at ${trimmedEmail.split('@')[1]}.`);
-            } else {
-                setAuthNotice('Check your email for a secure sign-in link.');
+            if (result?.noAccess) {
+                setAuthError("This email doesn't have access.");
             }
+            // Otherwise signed in: the auth state change re-renders into the app.
         } catch (error) {
             setAuthError(getFriendlyError(error.message).friendly || 'Authentication failed');
         }
@@ -2219,10 +2179,9 @@ export default function IntelligenceDashboard() {
         );
     }
 
-    // Name gate: capture display name once for magic-link signups (and backfill
-    // legacy null-name accounts) before the founder proceeds. Admins are redirected
-    // to /admin above and never reach this.
-    if (profile && !isAdmin && !profile.full_name) {
+    // Name gate: capture display name once on first sign-in (and backfill legacy
+    // null-name accounts) before the founder proceeds.
+    if (profile && !profile.full_name) {
         return (
             <NameGateScreen
                 onSubmit={updateFullName}
